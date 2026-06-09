@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin - 작품 업로드 (GitHub URL)</title>
+</head>
+<body>
+  <h1>작품 업로드 페이지</h1>
+
+  <input type="text" id="title" placeholder="작품 제목"><br>
+  <input type="text" id="student" placeholder="학생 이름"><br>
+  <textarea id="description" placeholder="작품 설명"></textarea><br>
+  <input type="text" id="imageUrl" placeholder="GitHub 이미지 Raw URL"><br>
+  <button id="uploadBtn">업로드</button>
+
+  <hr>
+  <h2>업로드된 작품 목록</h2>
+  <div id="artworkList"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } 
+      from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey:"AIzaSyCz12idSMrOXQaVeUoIlGN4lOxgBovtsXQ",
+      authDomain:"classvoting-a0e95.firebaseapp.com",
+      projectId:"classvoting-a0e95",
+      storageBucket:"classvoting-a0e95.firebasestorage.app",
+      messagingSenderId:"384140463404",
+      appId:"1:384140463404:web:44cd9553316a622f4d3089",
+      measurementId:"G-14JV67N5V0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 작품 업로드
+    document.getElementById("uploadBtn").addEventListener("click", async () => {
+      const title = document.getElementById("title").value;
+      const student = document.getElementById("student").value;
+      const description = document.getElementById("description").value;
+      const imageUrl = document.getElementById("imageUrl").value;
+
+      if (!imageUrl) {
+        alert("GitHub Raw 이미지 URL을 입력하세요!");
+        return;
+      }
+
+      await addDoc(collection(db, "artworks"), {
+        title,
+        student,
+        description,
+        image: imageUrl,
+        funding: 0
+      });
+
+      alert("작품 업로드 완료!");
+      loadArtworks();
+    });
+
+    // 작품 목록 불러오기
+    async function loadArtworks() {
+      const snap = await getDocs(collection(db, "artworks"));
+      let html = "";
+      snap.forEach(d => {
+        const data = d.data();
+        html += `
+          <div style="border:1px solid #ccc; padding:10px; margin:10px;">
+            <img src="${data.image}" width="150"><br>
+            <b>${data.title}</b> - ${data.student}<br>
+            ${data.description}<br>
+            <button onclick="editArtwork('${d.id}')">수정</button>
+            <button onclick="deleteArtwork('${d.id}')">삭제</button>
+          </div>
+        `;
+      });
+      document.getElementById("artworkList").innerHTML = html;
+    }
+
+    window.editArtwork = async (id) => {
+      const newTitle = prompt("새 제목을 입력하세요:");
+      if (!newTitle) return;
+      await updateDoc(doc(db, "artworks", id), { title: newTitle });
+      alert("수정 완료!");
+      loadArtworks();
+    };
+
+    window.deleteArtwork = async (id) => {
+      if (!confirm("정말 삭제하시겠습니까?")) return;
+      await deleteDoc(doc(db, "artworks", id));
+      alert("삭제 완료!");
+      loadArtworks();
+    };
+
+    loadArtworks();
+  </script>
+</body>
+</html>
