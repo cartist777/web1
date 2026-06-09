@@ -1,57 +1,142 @@
-<HTML>
-
-<HEAD>
-
-<TITLE>Your Title Here</TITLE>
-
-</HEAD>
-
-<BODY BGCOLOR="FFFFFF">
-
-<CENTER><IMG SRC="clouds.jpg" ALIGN="BOTTOM"> </CENTER>
-
-<HR>
-
-<a href="http://somegreatsite.com">Link Name</a>
-
-is a link to another nifty site
-
-<H1>This is a Header</H1>
-
-<H2>This is a Medium Header</H2>
-
-Send me mail at <a href="mailto:support@yourcompany.com">
-
-support@yourcompany.com</a>.
-
-<P> This is a new paragraph!
-
-<P> <B>This is a new paragraph!</B>
-
-<BR> <B><I>This is a new sentence without a paragraph break, in bold italics.</I></B>
-
-<HR>
-  <p>
-    <!-- 라이브리 시티 설치 코드 -->
-<div id="lv-container" data-id="city" data-uid="MTAyMC8zODk4OC8xNTUxNQ==">
-	<script type="text/javascript">
-   (function(d, s) {
-       var j, e = d.getElementsByTagName(s)[0];
-
-       if (typeof LivereTower === 'function') { return; }
-
-       j = d.createElement(s);
-       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
-       j.async = true;
-
-       e.parentNode.insertBefore(j, e);
-   })(document, 'script');
-	</script>
-<noscript> 라이브리 댓글 작성을 위해 JavaScript를 활성화 해주세요</noscript>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>학생 그림 펀딩 플랫폼</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f7fb;margin:0}
+header{background:#4f46e5;color:#fff;padding:16px;position:sticky;top:0}
+.container{max-width:1200px;margin:auto;padding:16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:768px){.grid{grid-template-columns:repeat(2,1fr)}}
+.card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.card img{width:100%;aspect-ratio:1/1;object-fit:cover}
+.info{padding:12px}
+button{background:#4f46e5;color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
+.rank{background:#fff;padding:12px;border-radius:12px;margin-bottom:16px}
+</style>
+</head>
+<body>
+<header>
+<div class="top">
+<h2>🎨 학생 그림 펀딩 플랫폼</h2>
+<div>
+<button id="loginBtn">Google 로그인</button>
+<span id="userInfo"></span>
+<span id="coinInfo"></span>
 </div>
-<!-- 시티 설치 코드 끝 -->
-  </p>
+</div>
+</header>
 
-</BODY>
+<div class="container">
+<div class="rank">
+<h3>🏆 TOP 3</h3>
+<div id="top3"></div>
+</div>
+<div id="gallery" class="grid"></div>
+</div>
 
-</HTML>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, increment, onSnapshot } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+const firebaseConfig = {
+ apiKey:"AIzaSyCz12idSMrOXQaVeUoIlGN4lOxgBovtsXQ",
+ authDomain:"classvoting-a0e95.firebaseapp.com",
+ projectId:"classvoting-a0e95",
+ storageBucket:"classvoting-a0e95.firebasestorage.app",
+ messagingSenderId:"384140463404",
+ appId:"1:384140463404:web:44cd9553316a622f4d3089",
+ measurementId:"G-14JV67N5V0"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser=null;
+
+loginBtn.onclick=()=>signInWithPopup(auth,new GoogleAuthProvider());
+
+onAuthStateChanged(auth, async(user)=>{
+ currentUser=user;
+ if(!user) return;
+
+ userInfo.innerText=user.displayName;
+
+ const userRef=doc(db,"users",user.uid);
+ const snap=await getDoc(userRef);
+
+ if(!snap.exists()){
+   await setDoc(userRef,{
+      name:user.displayName,
+      coins:100
+   });
+   coinInfo.innerText="보유코인:100";
+ }else{
+   coinInfo.innerText="보유코인:"+snap.data().coins;
+ }
+});
+
+function renderCard(id,data){
+ return `
+ <div class="card">
+ <img src="${data.image || 'https://raw.githubusercontent.com/USERNAME/REPO/main/images/default.jpg'}">
+ <div class="info">
+ <h4>${data.title||('작품 '+id)}</h4>
+ <div>${data.student||''}</div>
+ <p>${data.description||''}</p>
+ <b>💰 ${data.funding||0} 코인</b><br><br>
+ <button onclick="fund('${id}',10)">10코인</button>
+ <button onclick="fund('${id}',20)">20코인</button>
+ <button onclick="fund('${id}',50)">50코인</button>
+ </div>
+ </div>`;
+}
+
+window.fund = async(id,amount)=>{
+ if(!currentUser){
+   alert("로그인하세요");
+   return;
+ }
+
+ const userRef=doc(db,"users",currentUser.uid);
+ const userSnap=await getDoc(userRef);
+ let coins=userSnap.data().coins;
+
+ if(coins<amount){
+   alert("코인이 부족합니다.");
+   return;
+ }
+
+ await updateDoc(userRef,{coins:increment(-amount)});
+ await updateDoc(doc(db,"artworks",id),{funding:increment(amount)});
+
+ coinInfo.innerText="보유코인:"+(coins-amount);
+};
+
+onSnapshot(collection(db,"artworks"),(snap)=>{
+
+ let html="";
+ let ranking=[];
+
+ snap.forEach(d=>{
+   const data=d.data();
+   html+=renderCard(d.id,data);
+   ranking.push({...data,id:d.id});
+ });
+
+ gallery.innerHTML=html;
+
+ ranking.sort((a,b)=>(b.funding||0)-(a.funding||0));
+
+ top3.innerHTML=ranking.slice(0,3)
+ .map((x,i)=>`${i+1}위 ${x.title} (${x.funding||0}코인)`)
+ .join("<br>");
+});
+</script>
+</body>
+</html>
